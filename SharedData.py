@@ -3,17 +3,17 @@ class SharedData:
         self.data = {}
         self.data['rgb'] = None
     
-    def setData(key, value):
+    def setData(self, key, value):
         self.data[key] = value
 
-    def checkData(key):
+    def checkData(self, key):
         ret = None
         if key in self.data:
             ret = self.data[key]
 
         return ret
 
-    def getData(key):
+    def getData(self, key):
         ret = None
         if key in self.data:
             ret = self.data[key]

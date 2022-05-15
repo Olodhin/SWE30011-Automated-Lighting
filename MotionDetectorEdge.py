@@ -1,7 +1,7 @@
 from MotionDetectorServer import startServer 
 from SharedData import SharedData
 
-import serial, threading, re
+import serial, threading, re, pymysql
 
 class SerialComs:
     def __init__(self, **kwargs):
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     dbCon = DBComs()
     dbTable = 'MotionDetectorLog'
 
-    flaskThread = threading.Thread(target=startServer, args=(sharedData, False,))
+    flaskThread = threading.Thread(target=startServer, args=(sharedData,'127.0.0.1', 8080, False,))
     flaskThread.start()
 
     while True:
@@ -104,3 +104,9 @@ if __name__ == '__main__':
                 rgb = cmd.split(',')
                 command = 'r:{}.g:{}.b:{}'.format(rgb[0], rgb[1], rgb[2])
                 SerialComs.write(command)
+        except UnicodeDecodeError as e:
+            print('UnicodeDecodeError')
+            continue
+        except serial.SerialException as e:
+            print('Serial Exception')
+            continue

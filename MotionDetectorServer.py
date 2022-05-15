@@ -61,7 +61,7 @@ def checkInt(string):
     return ret
 
 
-def startServer(host='127.0.0.1', port=8080, debug=True, data):
+def startServer(data, host='127.0.0.1', port=8080, debug=True):
     global shared
     shared = data
     app.run(
