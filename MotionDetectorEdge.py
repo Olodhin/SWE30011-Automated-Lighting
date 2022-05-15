@@ -66,14 +66,14 @@ class DBComs:
     def commit(self, table, colNames, data):
         colNames = ', '.join(colNames)
         data = ', '.join(data)
-        command = 'INSERT INTO }| ({}}) VALUES ({})'.format(table, colNames, data)
+        command = 'INSERT INTO {} ({}}) VALUES ({})'.format(table, colNames, data)
         self.cursor.execute(command)
         self.com.commit()
 
 def checkCommand(sharedData):
     ret = None
     
-    colorSet = sharedData.checkData(['color'])
+    colorSet = sharedData.checkData(['colors'])
     if colorSet != '0,0,0':
         ret = colorSet
 

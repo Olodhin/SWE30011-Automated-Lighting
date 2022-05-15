@@ -30,6 +30,24 @@ def setColor():
         'data' : data
     }
 
+    r = flask.request.values.get('rVal')
+    g = flask.request.values.get('gVal')
+    b = flask.request.values.get('bVal')
+
+    r = checkInt(r)
+    g = checkInt(g)
+    b = checkInt(b)
+
+    if r is None:
+        r = 0
+    if g is None:
+        g = 0
+    if b is None:
+        b = 0
+
+    colors = '{},{},{}'.format(r, g, b)
+    shared.setData('colors', colors)
+
     return flask.redirect(flask.url_for('index'))
 
 
