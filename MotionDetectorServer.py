@@ -34,6 +34,11 @@ def setColor():
     g = flask.request.values.get('gVal')
     b = flask.request.values.get('bVal')
 
+    #print('rgb: {} {} {}'.format(r, g, b))
+
+    if g is None:
+        print('gNone')
+
     r = checkInt(r)
     g = checkInt(g)
     b = checkInt(b)
@@ -48,6 +53,8 @@ def setColor():
     colors = '{},{},{}'.format(r, g, b)
     shared.setData('colors', colors)
 
+    print('color: '+ colors)
+
     return flask.redirect(flask.url_for('index'))
 
 
@@ -56,7 +63,7 @@ def checkInt(string):
     
     match = intRe.search('{}'.format(string))
     if match is not None:
-        ret = match.group('num')
+        ret = int(match.group('num'))
 
     return ret
 

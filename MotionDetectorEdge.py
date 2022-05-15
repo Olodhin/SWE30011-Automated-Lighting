@@ -24,7 +24,7 @@ class SerialComs:
 
 
 class MDComs(SerialComs):
-    MSG_FORMAT = '(?P<state>[a-zA-Z_]+);(P<pirOutput>[A-Z]+);(?P<color>.+)'
+    MSG_FORMAT = 'state:(?P<state>[a-zA-Z:_]+);pirOutput(?P<pirOutput>[a-zA-Z:]+);color:(?P<color>.*)'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -32,6 +32,8 @@ class MDComs(SerialComs):
 
     def read(self):
         data = super().read()
+        #print(data)
+        
         match = self.msgPattern.search(data)
 
         ret = None
@@ -42,6 +44,8 @@ class MDComs(SerialComs):
                     'color' : match.group('color')
             }
         
+        #print(ret)
+
         return ret
 
 
@@ -73,9 +77,11 @@ class DBComs:
 def checkCommand(sharedData):
     ret = None
     
-    colorSet = sharedData.checkData(['colors'])
+    colorSet = sharedData.checkData('colors')
+    print('colorSet ', colorSet)
     if colorSet != '0,0,0':
         ret = colorSet
+        sharedData.getData('colors')
 
     return ret
 
@@ -92,18 +98,20 @@ if __name__ == '__main__':
     while True:
         try:
             data = SerialComs.read()
+            print(data)
             # wait for data from node
             if data is None:
                 continue
 
             cols = ['state', 'pirOutput', 'color']
-            dbCon.commit(dbTable, cols, data)
+            #dbCon.commit(dbTable, cols, data)
 
             cmd = checkCommand(sharedData)
             if cmd != None:
                 rgb = cmd.split(',')
-                command = 'r:{}.g:{}.b:{}'.format(rgb[0], rgb[1], rgb[2])
+                command = 'r:{},g:{},b:{}'.format(rgb[0], rgb[1], rgb[2])
                 SerialComs.write(command)
+                print(command)
         except UnicodeDecodeError as e:
             print('UnicodeDecodeError')
             continue
