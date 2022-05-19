@@ -126,12 +126,15 @@ class MotionDetectorEdge:
                     dbData
                 )
 
+                # publish to ThingsBoard
                 mqttMsg = self.formatMQTT(data)
                 #print(mqttMsg)
                 self.mqtt.publish(
                     mqttMsg,
                     self.mqttTopic
                 )
+
+                # 
 
                 cmd = self.checkCommand(self.data)
                 if cmd != None:

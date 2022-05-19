@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+	<head>
+		<title> Automated Lighting Node </title>
+		<link rel="stylesheet" type="text/css"  href="{{ url_for('static', filename='styles/MotionDetector.css')}}">
+	</head>
+	<body>
+		<h1>Data</h1>
+		<table>
+			<tr>
+				<th width=250px>State</th>
+				<th width=250px>Colour</th>
+				<th width=250px>PIR Output</th>
+			</tr>
+			<tr>
+				<td width=250px>{{ data['state'] }}</td>	
+				<td width=250px>{{ data['color'] }}</td>
+				<td width=250px>{{ data['pir'] }}</td>
+			</tr>
+		</table>
+		<form action={{ url_for('setColor') }} methods="post">
+			<label for="rVal">R</label>
+			<input type="text" id="rVal" name="rVal">
+			<div/>
+			<label for="gVal">G</label>
+			<input type="text" id="gVal" name="gVal">
+			<div/>
+			<label for="bVal">B</label>
+			<input type="text" id="bVal" name="bVal">
+			<div/>
+			<input type="submit">
+		</form>
+	</body>
+</html>
