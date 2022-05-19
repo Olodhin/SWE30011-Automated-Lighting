@@ -20,10 +20,18 @@ flask = {
     'debug' : False
 }
 
+#mqtt = {
+#    'user' : 'IOT_LIGHT_TOKEN',
+#    'pwd' : '',
+#    'host' : '192.168.56.1',
+#    'port' : 1883,
+#    'topic' : 'v1/devices/me/telemetry'
+#}
+
 mqtt = {
-    'user' : 'IOT_LIGHT_TOKEN',
+    'user' : 'PIR',
     'pwd' : '',
-    'host' : '192.168.56.1',
+    'host' : '192.168.43.194',
     'port' : 1883,
     'topic' : 'v1/devices/me/telemetry'
 }

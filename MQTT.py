@@ -37,8 +37,11 @@ class MQTT:
 
 if __name__ == '__main__':
     mDict = {
-        'username' : '',
-        'password' : ''
+        'username' : 'Dist',
+        'password' : '',
+        'hostname' : '192.168.43.194',
+        'port' : 1883,
+        'topic' : 'v1/devices/me/telemetry'
     }
     mqtt = MQTT(**mDict)
-    mqtt.publish('Test', '/test')
+    mqtt.publish('{\"test\":5}', 'v1/devices/me/telemetry')
