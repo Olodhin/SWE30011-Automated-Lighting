@@ -1,120 +1,148 @@
-from MotionDetectorServer import startServer 
+from SerialComs import MDComs
+from DBComs import DBComs
+from MotionDetectorServer import startServer
+from MQTT import MQTT
 from SharedData import SharedData
 
-import serial, threading, re, pymysql
+import serial, threading
 
-class SerialComs:
+class MotionDetectorEdge:
     def __init__(self, **kwargs):
-        port = '/dev/ttyUSB0' if 'port' not in kwargs else kwargs['port']
-        baudrate = 9600 if 'baudrate' not in kwargs else kwargs['baudrate']
+        # variables
+        serialPort = kwargs['serial']['port']
+        serialBaudrate = kwargs['serial']['baudrate']
 
-        self.com = serial.Serial(port, baudrate, timeout=1)
+        dbHost = kwargs['db']['host']
+        dbUser = kwargs['db']['user']
+        dbPwd = kwargs['db']['pwd']
+        dbName = kwargs['db']['name']
+        dbTName = kwargs['db']['tableName']
+        dbCols = kwargs['db']['cols']
+        dbDict = kwargs['db']
 
-    def write(self, msg):
-        msg = str.encode(str(msg))
-        self.com.write(msg)
-        self.flush()
+        flaskHost = kwargs['flask']['ip']
+        flaskPort = kwargs['flask']['port']
+        flaskDebug = kwargs['flask']['debug']
 
-    def read(self):
-        self.flush()
-        return self.com.readline().decode().strip()
+        mqttUser = kwargs['mqtt']['user']
+        mqttPwd = kwargs['mqtt']['pwd']
+        mqttHost = kwargs['mqtt']['host']
+        mqttPort = kwargs['mqtt']['port']
+        mqttTopic = kwargs['mqtt']['topic']
 
-    def flush(self):
-        self.com.flush()
+        # shared data
+        self.data = SharedData()
 
+        # serial
+        self.serial = MDComs(
+            port=serialPort,
+            baudrate=serialBaudrate
+        )
 
-class MDComs(SerialComs):
-    MSG_FORMAT = 'state:(?P<state>[a-zA-Z:_]+);pirOutput(?P<pirOutput>[a-zA-Z:]+);color:(?P<color>.*)'
+        # db
+        self.db = DBComs(
+            host=dbHost,
+            user=dbUser,
+            pwd=dbPwd,
+            dbName=dbName
+        )
+        self.dbTName = dbTName
+        self.dbCols = dbCols
+        self.dbDict = dbDict
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.msgPattern = re.compile(MDComs.MSG_FORMAT)
+        # mqtt
+        self.mqtt = MQTT(
+            username=mqttUser,
+            password=mqttPwd,
+            host=mqttHost,
+            port=mqttPort
+        )
+        self.mqttTopic = mqttTopic
 
-    def read(self):
-        data = super().read()
-        #print(data)
-        
-        match = self.msgPattern.search(data)
+        # flask
+        self.flaskHost = flaskHost
+        self.flaskPort = flaskPort
+        self.flaskDebug = flaskDebug
 
+    def checkCommand(self, data):
         ret = None
-        if match is not None:
-            ret = {
-                    'state' : match.group('state'),
-                    'pirOutput' : match.group('pirOutput'),
-                    'color' : match.group('color')
-            }
-        
-        #print(ret)
+
+        colorSet = data.checkData('colors')
+        #print('colorSet ', colorSet)
+        if colorSet != '0,0,0':
+            ret = colorSet
+            data.getData('colors')
 
         return ret
 
+    def formatDB(self, data):
+        state = data['state']
+        pir = data['pirOutput']
+        color = data['color']
 
-class DBComs:
-    def __init__(self, **kwargs):
-        host = 'localhost' if 'host' not in kwargs else kwargs['host']
-        user = 'pi' if 'user' not in kwargs else kwargs['user']
-        pwd = '' if 'pwd' not in kwargs else kwargs['pwd']
-        db = 'ovenDB' if 'db' not in kwargs else kwargs['db']
+        # Format to string
+        state = '\"{}\"'.format(state)
+        pir = '1' if pir == 'HIGH' else '0'
+        color = '\"{}\"'.format(color)
 
-        self.com = pymysql.connect(
-            host=host,
-            user=user,
-            password=pwd,
-            database=db,
-            cursorclass=pymysql.cursors.DictCursor
-        ) or die('failed to connect')
+        ret = [state, pir, color]
+        return ret
 
-        with self.com:
-            self.cursor = self.com.cursor
+    def formatMQTT(self, data):
+        msg1 = '\"state\":\"{}\"'.format(data['state'])
+        msg2 = '\"pirOutput\":\"{}\"'.format(data['pirOutput'])
+        msg3 = '\"color\":\"{}\"'.format(data['color'])
 
-    def commit(self, table, colNames, data):
-        colNames = ', '.join(colNames)
-        data = ', '.join(data)
-        command = 'INSERT INTO {} ({}}) VALUES ({})'.format(table, colNames, data)
-        self.cursor.execute(command)
-        self.com.commit()
+        msg = '{' + msg1 + ',' + msg2 + ',' + msg3 + '}'
+        return msg
 
-def checkCommand(sharedData):
-    ret = None
-    
-    colorSet = sharedData.checkData('colors')
-    print('colorSet ', colorSet)
-    if colorSet != '0,0,0':
-        ret = colorSet
-        sharedData.getData('colors')
+    def run(self):
+        # start flask
+        flaskThread = threading.Thread(
+            target=startServer,
+            args=(
+                self.data,
+                self.dbDict,
+                self.flaskHost,
+                self.flaskPort,
+                self.flaskDebug,
+            )
+        )
+        flaskThread.start()
 
-    return ret
+        while True:
+            try:
+                data = self.serial.read()
+                print('ser: ', data)
 
+                # wait for data from node
+                if data is None:
+                    continue
 
-if __name__ == '__main__':
-    sharedData = SharedData()
-    SerialComs = MDComs(port='/dev/ttyS2', baudrate=9600)
-    dbCon = DBComs()
-    dbTable = 'MotionDetectorLog'
+                dbData = self.formatDB(data)
+                self.db.commit(
+                    self.dbTName, 
+                    self.dbCols, 
+                    dbData
+                )
 
-    flaskThread = threading.Thread(target=startServer, args=(sharedData,'127.0.0.1', 8080, False,))
-    flaskThread.start()
+                mqttMsg = self.formatMQTT(data)
+                #print(mqttMsg)
+                self.mqtt.publish(
+                    mqttMsg,
+                    self.mqttTopic
+                )
 
-    while True:
-        try:
-            data = SerialComs.read()
-            print(data)
-            # wait for data from node
-            if data is None:
+                cmd = self.checkCommand(self.data)
+                if cmd != None:
+                    rgb = cmd.split(',')
+                    command = 'r:{},g:{},b:{}'.format(rgb[0],rgb[1],rgb[2])
+                    self.serial.write(command)
+                    # print(command)
+            except UnicodeDecodeError as e:
+                print('unicode decode error')
                 continue
-
-            cols = ['state', 'pirOutput', 'color']
-            #dbCon.commit(dbTable, cols, data)
-
-            cmd = checkCommand(sharedData)
-            if cmd != None:
-                rgb = cmd.split(',')
-                command = 'r:{},g:{},b:{}'.format(rgb[0], rgb[1], rgb[2])
-                SerialComs.write(command)
-                print(command)
-        except UnicodeDecodeError as e:
-            print('UnicodeDecodeError')
-            continue
-        except serial.SerialException as e:
-            print('Serial Exception')
-            continue
+            except serial.SerialException as e:
+                print('serial exception')
+                continue
+    
