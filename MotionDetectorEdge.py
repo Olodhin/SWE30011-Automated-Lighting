@@ -2,7 +2,8 @@ from SerialComs import MDComs
 from DBComs import DBComs
 from MotionDetectorServer import startServer
 from MQTT import MQTT
-from SharedData import SharedData
+from MQTTClient import MQTTClient
+#from SharedData import SharedData
 
 import serial, threading
 
@@ -51,11 +52,16 @@ class MotionDetectorEdge:
         self.dbDict = dbDict
 
         # mqtt
-        self.mqtt = MQTT(
-            username=mqttUser,
-            password=mqttPwd,
-            host=mqttHost,
-            port=mqttPort
+        #self.mqtt = MQTT(
+        #    username=mqttUser,
+        #    password=mqttPwd,
+        #    host=mqttHost,
+        #    port=mqttPort
+        #)
+        self.mqtt = MQTTClient(
+            host='192.168.0.232',
+            port='1883',
+            onMessage=self.mqttOnMessage
         )
         self.mqttTopic = mqttTopic
 
@@ -64,14 +70,29 @@ class MotionDetectorEdge:
         self.flaskPort = flaskPort
         self.flaskDebug = flaskDebug
 
-    def checkCommand(self, data):
+        # commmand buffer
+        self.cmdBuffer = []
+
+    #def checkCommand(self, data):
+    #    ret = None
+
+    #    colorSet = data.checkData('colors')
+    #    #print('colorSet ', colorSet)
+    #    if colorSet != '0,0,0':
+    #        ret = colorSet
+    #        data.getData('colors')
+
+    #    return ret
+
+    def mqttOnMessage(mqttc, obj, msg):
+        print('topic: ', msg.topic)
+        print('msg: ', msg.payload)
+
+    def checkCommand(self, buf):
         ret = None
 
-        colorSet = data.checkData('colors')
-        #print('colorSet ', colorSet)
-        if colorSet != '0,0,0':
-            ret = colorSet
-            data.getData('colors')
+        if len(buf) > 0:
+            ret = buf.pop(0)
 
         return ret
 
@@ -98,17 +119,17 @@ class MotionDetectorEdge:
 
     def run(self):
         # start flask
-        flaskThread = threading.Thread(
-            target=startServer,
-            args=(
-                self.data,
-                self.dbDict,
-                self.flaskHost,
-                self.flaskPort,
-                self.flaskDebug,
-            )
-        )
-        flaskThread.start()
+        #flaskThread = threading.Thread(
+        #    target=startServer,
+        #    args=(
+        #        self.data,
+        #        self.dbDict,
+        #        self.flaskHost,
+        #        self.flaskPort,
+        #        self.flaskDebug,
+        #    )
+        #)
+        #flaskThread.start()
 
         while True:
             try:
@@ -133,8 +154,6 @@ class MotionDetectorEdge:
                     mqttMsg,
                     self.mqttTopic
                 )
-
-                # 
 
                 cmd = self.checkCommand(self.data)
                 if cmd != None:
