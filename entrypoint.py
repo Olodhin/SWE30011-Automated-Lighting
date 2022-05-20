@@ -29,11 +29,12 @@ flask = {
 #}
 
 mqtt = {
-    'user' : 'PIR',
-    'pwd' : '',
-    'host' : '192.168.43.194',
+    #'user' : 'PIR',
+    #'pwd' : '',
+    'host' : '127.0.0.1',
     'port' : 1883,
-    'topic' : 'v1/devices/me/telemetry'
+    'pubTopic' : 'v1/devices/me/telemetry',
+    'subTopics' : ['lighting/rgb', 'lighting/on']
 }
 
 mdDict = {

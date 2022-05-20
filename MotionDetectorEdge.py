@@ -25,14 +25,15 @@ class MotionDetectorEdge:
         flaskPort = kwargs['flask']['port']
         flaskDebug = kwargs['flask']['debug']
 
-        mqttUser = kwargs['mqtt']['user']
-        mqttPwd = kwargs['mqtt']['pwd']
+        #mqttUser = kwargs['mqtt']['user']
+        #mqttPwd = kwargs['mqtt']['pwd']
         mqttHost = kwargs['mqtt']['host']
         mqttPort = kwargs['mqtt']['port']
-        mqttTopic = kwargs['mqtt']['topic']
+        mqttPubTopic = kwargs['mqtt']['pubTopic']
+        mqttSubTopic = kwargs['mqtt']['subTopics']
 
         # shared data
-        self.data = SharedData()
+        #self.data = SharedData()
 
         # serial
         self.serial = MDComs(
@@ -59,11 +60,12 @@ class MotionDetectorEdge:
         #    port=mqttPort
         #)
         self.mqtt = MQTTClient(
-            host='192.168.0.232',
-            port='1883',
-            onMessage=self.mqttOnMessage
+            host=mqttHost,
+            port=mqttPort,
+            onMessage=self.mqttOnMessage,
+            subTopic=mqttSubTopic
         )
-        self.mqttTopic = mqttTopic
+        self.mqttPubTopic = mqttPubTopic
 
         # flask
         self.flaskHost = flaskHost
@@ -84,9 +86,10 @@ class MotionDetectorEdge:
 
     #    return ret
 
-    def mqttOnMessage(mqttc, obj, msg):
+    def mqttOnMessage(self, mqttc, obj, msg):
         print('topic: ', msg.topic)
         print('msg: ', msg.payload)
+        self.cmdBuffer.append(msg.payload.decode())
 
     def checkCommand(self, buf):
         ret = None
@@ -131,6 +134,11 @@ class MotionDetectorEdge:
         #)
         #flaskThread.start()
 
+        mqttThread = threading.Thread(
+            target=self.mqtt.loop
+        )
+        mqttThread.start()
+
         while True:
             try:
                 data = self.serial.read()
@@ -152,15 +160,18 @@ class MotionDetectorEdge:
                 #print(mqttMsg)
                 self.mqtt.publish(
                     mqttMsg,
-                    self.mqttTopic
+                    self.mqttPubTopic
                 )
 
-                cmd = self.checkCommand(self.data)
+                cmd = self.checkCommand(self.cmdBuffer)
                 if cmd != None:
-                    rgb = cmd.split(',')
-                    command = 'r:{},g:{},b:{}'.format(rgb[0],rgb[1],rgb[2])
+                    command = cmd
+                    if len(cmd) > 2:
+                        rgb = cmd.split(',')
+                        command = 'r:{},g:{},b:{}'.format(rgb[0],rgb[1],rgb[2])
+                   
                     self.serial.write(command)
-                    # print(command)
+                    print(command)
             except UnicodeDecodeError as e:
                 print('unicode decode error')
                 continue

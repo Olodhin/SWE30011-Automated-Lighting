@@ -4,16 +4,32 @@ import threading
 import re
 
 intRe = re.compile('(?P<num>^\d+$)')
+msgRe = re.compile('{"state":"(?P<state>[a-zA-Z_]+)","pirOutput":"(?P<pirOutput>[a-zA-Z_]+)","color":"(?P<color>[0-9,]+)"}')
+
+data = {
+    'state' : 'N/A',
+    'color' : 'N/A',
+    'pir' : 'N/A'
+}
 
 def onConnect(mqttc, obj, flags, rc):
     print('connected')
     print('rc: ', str(rc))
-    mqttClient.subscribe('test', 0)
+    mqttClient.subscribe('v1/devices/me/telemetry', 0)
 
 def onMessage(mqttc, obj, msg):
-    print('topic: ', msg.topic)
-    print('qos: ', msg.qos)
-    print('msg: ', msg.payload)
+    #print('topic: ', msg.topic)
+    #print('qos: ', msg.qos)
+    #print('msg: ', msg.payload)
+
+    match = msgRe.search(msg.payload.decode())
+    #print(msg.payload.decode())
+    if match is not None:
+        data['state'] = match.group('state')
+        data['color'] = match.group('color')
+        data['pir'] = match.group('pirOutput')
+
+    #print(data)
 
     # ADD TO DATABASE
 
@@ -25,15 +41,9 @@ mqttClient.on_connect = onConnect
 mqttClient.on_message = onMessage
 mqttClient.on_publish = onPub
 
-mqttClient.connect('192.168.0.232', 1883, 60)
+mqttClient.connect('127.0.0.1', 1883, 60)
 
 app = flask.Flask(__name__)
-
-data = {
-    'state' : 'N/A',
-    'color' : 'N/A',
-    'pir' : 'N/A'
-}
 
 @app.route('/')
 def motionHome():
@@ -42,6 +52,9 @@ def motionHome():
     }
 
     return flask.render_template('MotionDetector.html', **ctx)
+
+def home():
+    return flask.redirect(flask.url_for('motionHome'))
 
 @app.route('/setColor', methods=['GET', 'POST'])
 def setColor():
@@ -62,9 +75,18 @@ def setColor():
 
     color = '{},{},{}'.format(r, g, b)
 
-    mqttClient.publish('test/topic2', color, qos=0)
+    #print('topic: {}\npubMsg: {}'.format('lighting/rgb', color))
+    if r != 0 or g != 0 or b != 0:
+        mqttClient.publish('lighting/rgb', color, qos=0)
 
-    return flask.redirect(flask.url_for('motionHome'))
+    return home()
+
+@app.route('/toggleOn', methods=['GET'])
+def turnOn():
+    print('on')
+    mqttClient.publish('lighting/on', 'e', qos=0)
+
+    return home()
 
 def checkInt(string):
     ret = None
