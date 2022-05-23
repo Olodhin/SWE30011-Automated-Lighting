@@ -32,6 +32,16 @@ class MotionDetectorEdge:
         mqttPubTopic = kwargs['mqtt']['pubTopic']
         mqttSubTopic = kwargs['mqtt']['subTopics']
 
+        tbHost = kwargs['tb']['host']
+        tbPort = kwargs['tb']['port']
+        tbUser = kwargs['tb']['user']
+        tbPwd = kwargs['tb']['pwd']
+        tbPubTopic = kwargs['tb']['pubTopic']
+
+        webHost = kwargs['web']['host']
+        webPort = kwargs['web']['port']
+        webPubTopic = kwargs['web']['pubTopic']
+
         # shared data
         #self.data = SharedData()
 
@@ -66,6 +76,18 @@ class MotionDetectorEdge:
             subTopic=mqttSubTopic
         )
         self.mqttPubTopic = mqttPubTopic
+        self.tb = MQTTClient(
+            host=tbHost,
+            port=tbPort,
+            user=tbUser,
+            pwd=tbPwd
+        )
+        self.tbPubTopic = tbPubTopic
+        self.web = MQTTClient(
+            host=webHost,
+            port=webPort,
+        )
+        self.webPubTopic = webPubTopic
 
         # flask
         self.flaskHost = flaskHost
@@ -139,6 +161,16 @@ class MotionDetectorEdge:
         )
         mqttThread.start()
 
+        tbThread = threading.Thread(
+            target=self.tb.loop        
+        )
+        tbThread.start()
+
+        webThread = threading.Thread(
+            target=self.web.loop
+        )
+        webThread.start()
+
         while True:
             try:
                 data = self.serial.read()
@@ -157,10 +189,14 @@ class MotionDetectorEdge:
 
                 # publish to ThingsBoard
                 mqttMsg = self.formatMQTT(data)
+                self.web.publish(
+                    data['state'],
+                    self.webPubTopic
+                )
                 #print(mqttMsg)
-                self.mqtt.publish(
+                self.tb.publish(
                     mqttMsg,
-                    self.mqttPubTopic
+                    self.tbPubTopic
                 )
 
                 cmd = self.checkCommand(self.cmdBuffer)

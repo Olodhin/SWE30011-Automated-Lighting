@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 class PolyRegression:
     def __init__(self):
@@ -16,5 +17,14 @@ class PolyRegression:
 
     def predict(self, x, y, name):
         model = self.getModel(x, y)
-        savePlot('fig', x, y, model)
+        self.savePlot('fig', x, y, model)
 
+if __name__ == '__main__':
+    x = []
+    y = []
+    for i in range(100):
+        y.append(20 + (random.random() * 10 - 5))
+        x.append(i + 1)
+
+    ml = PolyRegression()
+    ml.predict(x, y, 'fig')

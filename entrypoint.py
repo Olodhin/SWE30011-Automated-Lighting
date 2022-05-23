@@ -31,17 +31,33 @@ flask = {
 mqtt = {
     #'user' : 'PIR',
     #'pwd' : '',
-    'host' : '127.0.0.1',
+    'host' : '192.168.43.118',
     'port' : 1883,
     'pubTopic' : 'v1/devices/me/telemetry',
     'subTopics' : ['lighting/rgb', 'lighting/on']
+}
+
+web = {
+    'host' : '192.168.43.4',
+    'port' : 1883,
+    'pubTopic' : 'webserver/lighting'
+}
+
+tb = {
+    'user' : 'PIR',
+    'pwd' : '',
+    'host' : '192.168.43.194',
+    'port' : 1883,
+    'pubTopic' : 'v1/devices/me/telemetry'
 }
 
 mdDict = {
     'serial' : serial,
     'db' : db,
     'flask' : flask,
-    'mqtt' : mqtt
+    'mqtt' : mqtt,
+    'tb' : tb,
+    'web' : web
 }
 
 edge = MotionDetectorEdge(**mdDict)
