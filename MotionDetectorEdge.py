@@ -143,19 +143,6 @@ class MotionDetectorEdge:
         return msg
 
     def run(self):
-        # start flask
-        #flaskThread = threading.Thread(
-        #    target=startServer,
-        #    args=(
-        #        self.data,
-        #        self.dbDict,
-        #        self.flaskHost,
-        #        self.flaskPort,
-        #        self.flaskDebug,
-        #    )
-        #)
-        #flaskThread.start()
-
         mqttThread = threading.Thread(
             target=self.mqtt.loop
         )
@@ -198,6 +185,9 @@ class MotionDetectorEdge:
                     mqttMsg,
                     self.tbPubTopic
                 )
+
+                # publish to webserver
+                
 
                 cmd = self.checkCommand(self.cmdBuffer)
                 if cmd != None:

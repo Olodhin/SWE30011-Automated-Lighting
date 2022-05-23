@@ -1,9 +1,26 @@
 import paho.mqtt.client as client
+import threading
 
 class MQTTClient:
+    def onSubscribe(self, client, obj, mid, qos):
+        print('{}: Subscribed to {}'.format(
+            self.thread.name, str(mid)))
+
+    def onMessage(self, client, obj, msg):
+        print('{}: Got message {}'.format(
+            self.thread.name, msg.payload.decode()))
+
+    def onPublish(client, obj, mid):
+        print('{}: Sending message'.format(self.thread.name))
+
     def __init__(self, **kwargs):
         self.client = client.Client()
-        
+
+        if 'name' in kwargs:
+            self.name = kwargs['name']
+        else:
+            self.name = None
+
         if 'onConnect' in kwargs:
             self.client.on_connect = kwargs['onConnect']
         if 'onMessage' in kwargs:
@@ -24,10 +41,13 @@ class MQTTClient:
             self.client.username_pw_set(user)
         
         self.client.connect(host, port, 60)
-        if subTopic is not None:
-            for topic in subTopic:
-                self.client.subscribe(topic, 0)
 
+        self.thread = threading.Thread(name=self.name, target=self.client.loop_forever)
+
+        if 'subscribe' in kwargs:
+            for sub in kwargs['subscribe']:
+                self.client.subscribe(sub, 0)
+    
     def loop(self):
         self.client.loop_forever()
 
@@ -36,35 +56,12 @@ class MQTTClient:
 
     def onSub(client, obj, mid, qos):
         print('subscribed')
-
+    
     def publish(self ,msg, topic, qos=0):
         self.client.publish(topic, msg, qos=qos)
 
-def onMessage(mqttc, obj, msg):
-    print(msg.payload)
+    def startLoopThread(self):
+        print('{}: STARTING'.format(self.thread.name))
+        self.thread.start()
+        print('{}: STARTED'.format(self.thread.name))
 
-def onConnect(mqttc, obj, flags, rc):
-    print('connected')
-    print('rc: ', str(rc))
-
-def onSub(mqttc, obj, mid, granted_qos):
-    print('subscribed')
-
-def on_log(mqttc, obj, level, string):
-    print(string)
-
-if __name__ == '__main__':
-    #params = {
-    #    'host' : '127.0.0.1',
-    #    'port' : 1883,
-    #    'onMesssage' : onMessage
-    #}
-    #cl = MQTTClient(**params)
-    cl = client.Client()
-    cl.on_message = onMessage
-    cl.on_connect = onConnect
-    cl.on_subscribe = onSub
-    #cl.on_log = on_log
-    cl.connect('127.0.0.1', 1883, 60)
-    cl.subscribe('test', 0)
-    cl.loop_forever()
